@@ -1,0 +1,29 @@
+{
+  "parserOptions": {
+    "ecmaVersion": 6
+  },
+  "extends": "airbnb-base",
+  "globals": {
+    "m": false
+  },
+  "rules": {
+    "no-console": "off",
+    "object-curly-spacing": "off",
+    "no-new-func": "off",
+    "arrow-parens": "off",
+    "no-mixed-operators": "off",
+    "max-len": ["warn", 120],
+    "comma-dangle": [
+      "error", {
+        "arrays": "always-multiline",
+        "objects": "always-multiline",
+        "imports": "always-multiline",
+        "exports": "always-multiline",
+        "functions": "ignore"
+      }
+    ]
+  },
+  "env": {
+    "browser": true
+  }
+}
