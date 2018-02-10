@@ -65,15 +65,19 @@ const shorthands = {
   sin: 'Math.sin',
   sqrt: 'Math.sqrt',
   pi: 'Math.PI',
+  abs: 'Math.abs',
 };
 
 const reserved = new Set(Object.keys(shorthands).concat(['x', 'alpha']));
 
 function extractSymbols(symbols, func) {
-  const symbolRe = /[a-z_]+/ig;
+  const symbolRe = /[a-z_]+/gi;
   let match;
   while (match = symbolRe.exec(func)) { // eslint-disable-line no-cond-assign
-    symbols.add(match[0]);
+    const sym = match[0];
+    if (sym.toLowerCase() === sym) {
+      symbols.add(sym);
+    }
   }
 }
 
