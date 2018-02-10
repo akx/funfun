@@ -15,7 +15,9 @@ function evaluateFnToPoly(fn, minX, maxX, steps, width, height) {
     const p = (step / steps);
     const x = minX + (maxX - minX) * p;
     const y = fn(x);
-    points.push(`${p * width},${(1.0 - y) * height}`);
+    if (Number.isFinite(y)) {
+      points.push(`${p * width},${(1.0 - y) * height}`);
+    }
   }
   return points;
 }
@@ -58,33 +60,57 @@ function symEditor(state, symbol) {
   ]);
 }
 
-const reserved = new Set(['x', 'cos', 'sin', 'sqrt', 'alpha']);
+const shorthands = {
+  cos: 'Math.cos',
+  sin: 'Math.sin',
+  sqrt: 'Math.sqrt',
+  pi: 'Math.PI',
+};
 
+const reserved = new Set(Object.keys(shorthands).concat(['x', 'alpha']));
 
 function extractSymbols(symbols, func) {
   const symbolRe = /[a-z_]+/ig;
   let match;
   while (match = symbolRe.exec(func)) { // eslint-disable-line no-cond-assign
-    const sym = match[0];
-    if (!reserved.has(sym)) {
-      symbols.add(sym);
-    }
+    symbols.add(match[0]);
   }
 }
 
-function constructFunction(symbols, state) {
-  const finalFuncBody = `
-const sin = Math.sin, cos = Math.cos, sqrt = Math.sqrt;
-const alpha = Math.min(1, Math.max(0, ${state.blendFunc.func}));
-return (${state.func1.func}) * (1 - alpha) + (${state.func2.func}) * (alpha);
-`.trim();
-  const paramNameList = ['x'].concat(symbols);
-  const extraParamValues = symbols.map(symbol => state.env[symbol] || 0);
-  const userFunc = new Function(paramNameList.join(','), finalFuncBody);
-  const func = x => userFunc.apply(null, [x].concat(extraParamValues)); // eslint-disable-line prefer-spread
-  func.body = finalFuncBody;
-  const symbolsWithValues = symbols.map((p, i) => `${p} = ${extraParamValues[i]}`);
+function constructFunction(allSymbols, editableSymbols, state) {
+  const shorthandDefinitions = allSymbols.filter(symbol => shorthands[symbol]).map(symbol => `${symbol} = ${shorthands[symbol]}`);
+  const blendFunc = state.blendFunc.func;
+  const f1 = state.func1.func;
+  const f2 = state.func2.func;
+  const finalFuncLines = [];
+  if (shorthandDefinitions.length) {
+    finalFuncLines.push(`const ${shorthandDefinitions.join(', ')};`);
+  }
+  let alphaLine = false;
+  if (/^[-+*/.0-9]+$/.test(blendFunc)) {
+    alphaLine = `const alpha = ${Math.min(1, Math.max(0, eval(blendFunc)))};`; // eslint-disable-line no-eval
+  } else if (state.blendFunc.func) {
+    alphaLine = `const alpha = Math.min(1, Math.max(0, ${state.blendFunc.func}));`;
+  }
+  if (f1 && f2 && alphaLine) {
+    finalFuncLines.push(alphaLine);
+    finalFuncLines.push(`return (${f1}) * (1 - alpha) + (${f2}) * (alpha);`);
+  } else if (f1) {
+    finalFuncLines.push(`return ${f1};`);
+  } else if (f2) {
+    finalFuncLines.push(`return ${f2};`);
+  } else {
+    finalFuncLines.push('return 0;');
+  }
+  const finalFuncBody = finalFuncLines.join('\n').trim();
+  const argNameList = ['x'].concat(editableSymbols);
+  const extraArgValues = editableSymbols.map(symbol => state.env[symbol] || 0);
+  const symbolsWithValues = editableSymbols.map((p, i) => `${p} = ${extraArgValues[i]}`);
   const paramList = ['x'].concat(symbolsWithValues).join(', ');
+
+  const userFunc = new Function(argNameList.join(','), finalFuncBody);
+  const func = x => userFunc.apply(null, [x].concat(extraArgValues)); // eslint-disable-line prefer-spread
+  func.body = finalFuncBody;
   func.full = `(${paramList}) => {\n  ${finalFuncBody.replace(/\n/g, '\n  ')}\n}`;
   return func;
 }
@@ -92,18 +118,19 @@ const app = {
   view() {
     const symSet = new Set();
     [state.func1, state.func2, state.blendFunc].forEach(func => extractSymbols(symSet, func.func));
-    const symbols = Array.from(symSet).sort();
+    const allSymbols = Array.from(symSet).sort();
+    const editableSymbols = allSymbols.filter(symbol => !reserved.has(symbol));
     let func;
     let error;
     let points = [];
     try {
-      func = constructFunction(symbols, state);
+      func = constructFunction(allSymbols, editableSymbols, state);
     } catch (e) {
       error = e;
     }
     if (!error) {
       try {
-        points = evaluateFnToPoly(func, 0, 1, 50, 800, 600);
+        points = evaluateFnToPoly(func, 0, 1, 100, 800, 600);
       } catch (e) {
         error = e.toString();
       }
@@ -113,7 +140,7 @@ const app = {
         funcEditor(state.func1, 'f1'),
         funcEditor(state.func2, 'f2'),
         funcEditor(state.blendFunc, 'blend'),
-        m('div', symbols.map(symbol => symEditor(state, symbol))),
+        m('div', editableSymbols.map(symbol => symEditor(state, symbol))),
       ]),
       m('div#graph', [
         m(
