@@ -8,11 +8,10 @@
   },
   "rules": {
     "no-console": "off",
-    "object-curly-spacing": "off",
     "no-new-func": "off",
-    "arrow-parens": "off",
     "no-mixed-operators": "off",
     "max-len": ["warn", 120],
+    "no-multi-spaces": ["error", { "ignoreEOLComments": false }],
     "comma-dangle": [
       "error", {
         "arrays": "always-multiline",

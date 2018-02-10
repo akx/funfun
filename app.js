@@ -1,7 +1,7 @@
 const state = {
-  func1: {func: 'x + a'},
-  func2: {func: '1 - x'},
-  blendFunc: {func: 'x'},
+  func1: { func: 'x + a' },
+  func2: { func: '1 - x' },
+  blendFunc: { func: 'x' },
   env: {},
 };
 
@@ -23,7 +23,7 @@ function evaluateFnToPoly(fn, minX, maxX, steps, width, height) {
 function funcEditor(func, title) {
   let error = null;
   try {
-    new Function(func.func);  // eslint-disable-line no-new
+    new Function(func.func); // eslint-disable-line no-new
   } catch (e) {
     error = e;
   }
@@ -33,7 +33,7 @@ function funcEditor(func, title) {
     m('input', {
       value: func.func,
       oninput: (e) => {
-        func.func = e.target.value;  // eslint-disable-line no-param-reassign
+        func.func = e.target.value; // eslint-disable-line no-param-reassign
         saveState();
       },
     }),
@@ -43,15 +43,17 @@ function funcEditor(func, title) {
 
 function symEditor(state, symbol) {
   const handleChange = (e) => {
-    state.env[symbol] = parseFloat(e.target.value);  // eslint-disable-line no-param-reassign
+    state.env[symbol] = parseFloat(e.target.value); // eslint-disable-line no-param-reassign
     saveState();
   };
   const value = state.env[symbol] || 0;
-  return m('div.sym', {key: symbol}, [
+  return m('div.sym', { key: symbol }, [
     m('h2', symbol),
     m('div', [
-      m('input', {type: 'number', value, oninput: handleChange}),
-      m('input', {type: 'range', value, min: 0, max: 1, step: 0.001, oninput: handleChange}),
+      m('input', { type: 'number', value, oninput: handleChange }),
+      m('input', {
+        type: 'range', value, min: 0, max: 1, step: 0.001, oninput: handleChange,
+      }),
     ]),
   ]);
 }
@@ -60,9 +62,9 @@ const reserved = new Set(['x', 'cos', 'sin', 'sqrt', 'alpha']);
 
 
 function extractSymbols(symbols, func) {
-  const symbolRe = /[a-z_]+/g;
+  const symbolRe = /[a-z_]+/ig;
   let match;
-  while (match = symbolRe.exec(func)) {  // eslint-disable-line no-cond-assign
+  while (match = symbolRe.exec(func)) { // eslint-disable-line no-cond-assign
     const sym = match[0];
     if (!reserved.has(sym)) {
       symbols.add(sym);
@@ -77,20 +79,19 @@ const alpha = Math.min(1, Math.max(0, ${state.blendFunc.func}));
 return (${state.func1.func}) * (1 - alpha) + (${state.func2.func}) * (alpha);
 `.trim();
   const paramNameList = ['x'].concat(symbols);
-  const extraParamValues = symbols.map((symbol) => state.env[symbol] || 0);
+  const extraParamValues = symbols.map(symbol => state.env[symbol] || 0);
   const userFunc = new Function(paramNameList.join(','), finalFuncBody);
-  const func = (x) => userFunc.apply(null, [x].concat(extraParamValues));  // eslint-disable-line prefer-spread
+  const func = x => userFunc.apply(null, [x].concat(extraParamValues)); // eslint-disable-line prefer-spread
   func.body = finalFuncBody;
-  const paramList = `x, ${symbols.map((p, i) => `${p} = ${extraParamValues[i]}`).join(', ')}`;
+  const symbolsWithValues = symbols.map((p, i) => `${p} = ${extraParamValues[i]}`);
+  const paramList = ['x'].concat(symbolsWithValues).join(', ');
   func.full = `(${paramList}) => {\n  ${finalFuncBody.replace(/\n/g, '\n  ')}\n}`;
   return func;
 }
 const app = {
   view() {
     const symSet = new Set();
-    [state.func1, state.func2, state.blendFunc].forEach(
-      (func) => extractSymbols(symSet, func.func)
-    );
+    [state.func1, state.func2, state.blendFunc].forEach(func => extractSymbols(symSet, func.func));
     const symbols = Array.from(symSet).sort();
     let func;
     let error;
@@ -112,14 +113,14 @@ const app = {
         funcEditor(state.func1, 'f1'),
         funcEditor(state.func2, 'f2'),
         funcEditor(state.blendFunc, 'blend'),
-        m('div', symbols.map((symbol) => symEditor(state, symbol))),
+        m('div', symbols.map(symbol => symEditor(state, symbol))),
       ]),
       m('div#graph', [
         m(
           'svg',
-          {width: 800, height: 600, style: 'border: 1px solid black'},
+          { width: 800, height: 600, style: 'border: 1px solid black' },
           [
-            m('polyline', {fill: 'none', stroke: 'black', points}),
+            m('polyline', { fill: 'none', stroke: 'black', points }),
           ]
         ),
         (error ? m('div', error.toString()) : null),
