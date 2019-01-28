@@ -3,20 +3,22 @@ const state = {
   func2: { func: '1 - x' },
   blendFunc: { func: 'x' },
   env: {},
+  maxX: 1,
+  maxY: 1,
 };
 
 function saveState() {
   localStorage.setItem('funfunState', JSON.stringify(state));
 }
 
-function evaluateFnToPoly(fn, minX, maxX, steps, width, height) {
+function evaluateFnToPoly(fn, minX, maxX, maxY, steps, width, height) {
   const points = [];
   for (let step = 0; step <= steps; step += 1) {
     const p = (step / steps);
     const x = minX + (maxX - minX) * p;
     const y = fn(x);
     if (Number.isFinite(y)) {
-      points.push(`${p * width},${(1.0 - y) * height}`);
+      points.push(`${p * width},${(1.0 - (y / maxY)) * height}`);
     }
   }
   return points;
@@ -134,7 +136,7 @@ const app = {
     }
     if (!error) {
       try {
-        points = evaluateFnToPoly(func, 0, 1, 100, 800, 600);
+        points = evaluateFnToPoly(func, 0, state.maxX, state.maxY, 400, 800, 600);
       } catch (e) {
         error = e.toString();
       }
@@ -154,6 +156,12 @@ const app = {
             m('polyline', { fill: 'none', stroke: 'black', points }),
           ]
         ),
+        m('div#graph-ctl', [
+          m('span', 'maxX'),
+          m('input', {type: 'number', value: state.maxX, placeholder: 'maxX', oninput: e => state.maxX = e.target.value}),
+          m('span', 'maxY'),
+          m('input', {type: 'number', value: state.maxY, placeholder: 'maxY', oninput: e => state.maxY = e.target.value}),
+        ]),
         (error ? m('div', error.toString()) : null),
         (func ? m('pre', func.full) : null),
       ]),

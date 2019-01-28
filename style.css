@@ -22,7 +22,7 @@ main {
 }
 
 #graph {
-    flex: 3;
+    align-content: flex-end;
 }
 
 .func, .sym {
@@ -41,4 +41,12 @@ pre {
 
 .error {
     color: red;
+}
+
+#graph-ctl {
+    display: flex;
+}
+#graph-ctl > * {
+    flex: 1;
+    text-align: right;
 }
